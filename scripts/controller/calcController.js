@@ -11,6 +11,7 @@ class CalcController {
     this._currentDate
     this.initialize()
     this.initButtonsEvents()
+    this.initKeyboard()
   }
 
   initialize() {
@@ -35,6 +36,8 @@ class CalcController {
 
   clearAll() {
     this._operation = []
+    this.lastNumber1 = 0
+    this.lastOperator = ''
     this.displayCalc = '0'
   }
 
@@ -43,8 +46,31 @@ class CalcController {
     this.displayCalc = '0'
   }
 
+  setLastOperation(value) {
+    this._operation[this._operation.length - 1] = value
+  }
+
   getLastOperation() {
     return this._operation[this._operation.length - 1]
+  }
+
+  addDot() {
+    let last = this.getLastOperation()
+
+    if (typeof last === 'string' && last.split('').indexOf('.') > -1)
+      return false
+    if (this.isOperator(last) || !last) {
+      this.pushOperation('0.')
+    } else {
+      this.setLastOperation(last.toString() + '.')
+    }
+    this.displayCalc = this._operation
+  }
+
+  initKeyboard() {
+    document.addEventListener('keyup', e => {
+      this.execBtn(e.key)
+    })
   }
 
   isOperator(value) {
@@ -72,6 +98,7 @@ class CalcController {
 
   result() {
     let result
+    console.log(this._operation)
     if (this._operation.length == 1) {
       result = eval(
         this._operation.toString() +
@@ -88,30 +115,33 @@ class CalcController {
   }
 
   addOperation(value) {
-    if (this.lastNumber1)
-      if (isNaN(this.getLastOperation()) || this.isOperator(value)) {
-        //String
-        if (this.isOperator(value)) {
-          if (this.isOperator(this.getLastOperation())) {
-            //Change operators
-            this._operation[this._operation.length - 1] = value
-          } else {
-            //insert operators
-
-            this.pushOperation(value)
-          }
-        } else if (isNaN(value)) {
+    if (this.lastNumber1 != 0 && this.lastOperator != '' && !isNaN(value)) {
+      this.clearAll()
+    }
+    this.lastNumber1 = 0
+    this.lastOperator = ''
+    if (isNaN(this.getLastOperation()) || this.isOperator(value)) {
+      //String
+      if (this.isOperator(value)) {
+        if (this.isOperator(this.getLastOperation())) {
+          //Change operators
+          this._operation[this._operation.length - 1] = value
         } else {
-          //First Number
-          this.pushOperation(parseFloat(value))
-          this.displayCalc = value
+          //insert operators
+
+          this.pushOperation(value)
         }
       } else {
-        let newValue = this.getLastOperation().toString() + value.toString()
-        this._operation.pop()
-        this.pushOperation(parseFloat(newValue))
-        this.displayCalc = newValue
+        //First Number
+        this.pushOperation(value)
+        this.displayCalc = value
       }
+    } else {
+      let newValue = this.getLastOperation().toString() + value.toString()
+      this._operation.pop()
+      this.pushOperation(newValue)
+      this.displayCalc = newValue
+    }
   }
   //#region Botoes finalizados
   setError() {
@@ -121,31 +151,41 @@ class CalcController {
   execBtn(value) {
     switch (value) {
       case 'ac':
+      case 'Escape' /*Funções de teclado*/:
         this.clearAll()
         break
       case 'ce':
+      case 'Backspace':
         this.clearEntry()
         break
       case 'porcento':
+      case '%':
         this.addOperation('%')
         break
       case 'divisao':
+      case '/':
         this.addOperation('/')
         break
       case 'multiplicacao':
+      case '*':
         this.addOperation('*')
         break
       case 'subtracao':
+      case '-':
         this.addOperation('-')
         break
       case 'soma':
+      case '+':
         this.addOperation('+')
         break
       case 'igual':
+      case 'Enter':
         this.result()
         break
       case 'ponto':
-        this.addOperation('.')
+      case '.':
+      case ',':
+        this.addDot('.')
         break
       case '0':
       case '1':
@@ -158,10 +198,6 @@ class CalcController {
       case '8':
       case '9':
         this.addOperation(parseInt(value))
-        break
-
-      default:
-        this.setError()
         break
     }
   }
