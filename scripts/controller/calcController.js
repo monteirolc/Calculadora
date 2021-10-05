@@ -1,5 +1,7 @@
 class CalcController {
   constructor() {
+    this._audio = new Audio('click.mp3')
+    this._audioOnOff = false
     this._operation = []
     this._lastOperator = ''
     this._lastNumber1 = 0
@@ -12,6 +14,8 @@ class CalcController {
     this.initialize()
     this.initButtonsEvents()
     this.initKeyboard()
+    // this.pasteFromClipboard()
+    this.copyToClipBoard()
   }
 
   initialize() {
@@ -26,6 +30,51 @@ class CalcController {
       )
       this._timeEl.innerHTML = this.currentDate.toLocaleTimeString(this._locale)
     }, 1000)
+    this.pasteFromClipboard()
+    document.querySelectorAll('.btn-ac').forEach(btn => {
+      btn.addEventListener('dblclick', e => {
+        this.toogleAudio()
+      })
+    })
+  }
+
+  toogleAudio() {
+    this._audioOnOff = !this._audioOnOff
+  }
+
+  playAudio() {
+    if (this._audioOnOff) {
+      this._audio.currentTime = 0
+      this._audio.play()
+    }
+  }
+
+  initButtonsEvents() {
+    this.playAudio()
+    let buttons = document.querySelectorAll('#buttons > g, #parts > g')
+    buttons.forEach((btn, index) => {
+      this.addEventListenerAll(btn, 'click drag', e => {
+        let textBtn = btn.className.baseVal.replace('btn-', '')
+        this.execBtn(textBtn)
+      })
+      this.addEventListenerAll(btn, 'mouseover mouseup mousedown', e => {
+        btn.style.cursor = 'pointer'
+      })
+    })
+  }
+
+  initKeyboard() {
+    document.addEventListener('keyup', e => {
+      switch (e.key) {
+        case 'c':
+          if (e.ctrlKey) this.copyToClipBoard()
+          break
+
+        default:
+          this.execBtn(e.key)
+          break
+      }
+    })
   }
 
   addEventListenerAll(element, events, functions) {
@@ -67,12 +116,6 @@ class CalcController {
     this.displayCalc = this._operation
   }
 
-  initKeyboard() {
-    document.addEventListener('keyup', e => {
-      this.execBtn(e.key)
-    })
-  }
-
   isOperator(value) {
     return ['+', '-', '*', '/', '%'].indexOf(value) > -1
   }
@@ -97,21 +140,25 @@ class CalcController {
   }
 
   result() {
-    let result
-    console.log(this._operation)
-    if (this._operation.length == 1) {
-      result = eval(
-        this._operation.toString() +
-          this.lastOperator +
-          this.lastNumber1.toString()
-      )
-    } else {
-      this.lastOperator = this._operation[1]
-      this.lastNumber1 = this._operation[2]
-      result = eval(this._operation.join(''))
+    try {
+      let result
+      console.log(this._operation)
+      if (this._operation.length == 1) {
+        result = eval(
+          this._operation.toString() +
+            this.lastOperator +
+            this.lastNumber1.toString()
+        )
+      } else {
+        this.lastOperator = this._operation[1]
+        this.lastNumber1 = this._operation[2]
+        result = eval(this._operation.join(''))
+      }
+      this.displayCalc = result
+      this._operation = [result]
+    } catch (error) {
+      this.setError()
     }
-    this.displayCalc = result
-    this._operation = [result]
   }
 
   addOperation(value) {
@@ -143,12 +190,13 @@ class CalcController {
       this.displayCalc = newValue
     }
   }
-  //#region Botoes finalizados
+
   setError() {
     this.displayCalc = 'ERROR'
   }
 
   execBtn(value) {
+    this.playAudio()
     switch (value) {
       case 'ac':
       case 'Escape' /*Funções de teclado*/:
@@ -202,19 +250,24 @@ class CalcController {
     }
   }
 
-  initButtonsEvents() {
-    let buttons = document.querySelectorAll('#buttons > g, #parts > g')
-    buttons.forEach((btn, index) => {
-      this.addEventListenerAll(btn, 'click drag', e => {
-        let textBtn = btn.className.baseVal.replace('btn-', '')
-        this.execBtn(textBtn)
-      })
-      this.addEventListenerAll(btn, 'mouseover mouseup mousedown', e => {
-        btn.style.cursor = 'pointer'
-      })
-    })
+  copyToClipBoard() {
+    let input = document.createElement('input')
+    input.value = this.displayCalc
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('Copy')
+    input.remove()
   }
 
+  pasteFromClipboard() {
+    document.addEventListener('paste', e => {
+      let text = e.clipboardData.getData('text')
+
+      this.displayCalc = parseFloat(text)
+      this.setLastOperation(this.displayCalc)
+    })
+  }
+  //#region  getters and setters
   get lastNumber1() {
     return this._lastNumber1
   }
